@@ -27,9 +27,9 @@ int main(int argc, char **argv)
 
     /* Using the driver for & bus address of *my* particular card for now... */
     if((drm_fd = drmOpen("radeon", "PCI:2:0:0")) < 0) {
-      fprintf(stderr, "Could not open DRM device (return value %d)\n", drm_fd);
-      rval = 1;
-      goto cleanup;
+        fprintf(stderr, "Could not open DRM device (return value %d)\n", drm_fd);
+        rval = 1;
+        goto cleanup;
     }
 
     fprintf(stderr, "Got fd %d\n", drm_fd);
@@ -44,9 +44,9 @@ int main(int argc, char **argv)
     sv.drm_dd_minor = -1;
 
     if(drmSetInterfaceVersion(drm_fd, &sv) < 0) {
-      perror("Failed to set DRM interface version to 1.1");
-      rval = 1;
-      goto cleanup;
+        perror("Failed to set DRM interface version to 1.1");
+        rval = 1;
+        goto cleanup;
     }
 
     if(!drmCommandWriteRead(drm_fd, DRM_RADEON_GEM_INFO, &meminfo, sizeof(meminfo)))
@@ -59,9 +59,9 @@ int main(int argc, char **argv)
     /* Going to assume proper kernel support is there from here on... */
 
     if((bufmgr = radeon_bo_manager_gem_ctor(drm_fd)) == NULL) {
-      fputs("Could not initialize a buffer object manager\n", stderr);
-      rval = 1;
-      goto cleanup;
+        fputs("Could not initialize a buffer object manager\n", stderr);
+        rval = 1;
+        goto cleanup;
     }
 
     /* Make buffer object */
