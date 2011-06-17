@@ -15,13 +15,34 @@
 #include <radeon_bo.h>
 #include <radeon_bo_gem.h>
 
+#define BUF_SIZE 256
+
+static unsigned char x[BUF_SIZE];
+
+static void initialize_x()
+{
+    size_t i;
+
+    for(i = 0; i < BUF_SIZE; i++)
+        x[i] = (i * 50) % 253;
+}
+
+static void print_bo_info(struct radeon_bo *bo)
+{
+    fprintf(stderr, "  mapped to %p\n  flags: %x\n  handle: %x\n  size: %x\n",
+            bo->ptr, bo->flags, bo->handle, bo->size);
+}
+
 int main(int argc, char **argv)
 {
     int drm_fd = -1, rval = 0;
     drmSetVersion sv;
     struct radeon_bo_manager *bufmgr = NULL;
+    int bo_mapped = 0;
     struct radeon_bo *bo = NULL;
     struct drm_radeon_gem_info meminfo;
+    size_t i;
+    unsigned char *ptr = NULL;
 
     fputs("Hello world!\n", stderr);
 
@@ -77,9 +98,56 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
+    initialize_x();
+
+    /* Make a writable mapping of the buffer object into system memory */
+    if((radeon_bo_map(bo, 1) != 0) || (bo->ptr == NULL)) {
+        fputs("Could not map buffer object into main memory\n", stderr);
+        rval = 1;
+        goto cleanup;
+    } else {
+        bo_mapped = 1;
+        fputs("Buffer object mapped\n", stderr);
+        print_bo_info(bo);
+        ptr = bo->ptr;
+    }
+
+    for(i = 0; i < BUF_SIZE; i++)
+        ptr[i] = x[i];
+
+    /* Unmap buffer object */
+    radeon_bo_unmap(bo);
+    bo_mapped = 0;
+    fputs("Buffer object unmapped\n", stderr);
+    print_bo_info(bo);
+
+    /* Map the buffer back into system memory, this time read-only */
+    if((radeon_bo_map(bo, 0) != 0) || (bo->ptr == NULL)) {
+        fputs("Could not map buffer object a second time\n", stderr);
+        rval = 1;
+        goto cleanup;
+    } else {
+        bo_mapped = 1;
+        fputs("Mapped buffer object again\n", stderr);
+        print_bo_info(bo);
+        ptr = bo->ptr;
+    }
+
+    fputs("        original        |      buffer object\n", stderr);
+#define B "%02x "
+    for(i = 0; i < BUF_SIZE / 8; i++)
+        fprintf(stderr, B B B B B B B B "  " B B B B B B B B "\n",
+                x[i*8], x[i*8+1], x[i*8+2], x[i*8+3],
+                x[i*8+4], x[i*8+5], x[i*8+6], x[i*8+7],
+                ptr[i*8], ptr[i*8+1], ptr[i*8+2], ptr[i*8+3],
+                ptr[i*8+4], ptr[i*8+5], ptr[i*8+6], ptr[i*8+7]);
+
     fputs("End!\n", stderr);
 
 cleanup:
+
+    if(bo_mapped)
+        radeon_bo_unmap(bo);
 
     if(bo != NULL)
         bo = radeon_bo_unref(bo);
