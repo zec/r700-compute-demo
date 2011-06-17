@@ -34,6 +34,23 @@ static void print_bo_info(struct radeon_bo *bo)
             bo->ptr, bo->flags, bo->handle, bo->size);
 }
 
+/* This assumes that n is a multiple of 8 */
+static void print_buffers(const unsigned char *orig,
+                          const unsigned char *buf, size_t n)
+{
+    size_t i;
+
+    fputs("        original        |          buffer\n", stderr);
+#define B "%02x "
+    for(i = 0; i < n / 8; i++)
+        fprintf(stderr, B B B B B B B B "  " B B B B B B B B "\n",
+                orig[i*8], orig[i*8+1], orig[i*8+2], orig[i*8+3],
+                orig[i*8+4], orig[i*8+5], orig[i*8+6], orig[i*8+7],
+                buf[i*8], buf[i*8+1], buf[i*8+2], buf[i*8+3],
+                buf[i*8+4], buf[i*8+5], buf[i*8+6], buf[i*8+7]);
+#undef B
+}
+
 int main(int argc, char **argv)
 {
     int drm_fd = -1, rval = 0;
@@ -135,14 +152,7 @@ int main(int argc, char **argv)
         ptr = bo->ptr;
     }
 
-    fputs("        original        |      buffer object\n", stderr);
-#define B "%02x "
-    for(i = 0; i < BUF_SIZE / 8; i++)
-        fprintf(stderr, B B B B B B B B "  " B B B B B B B B "\n",
-                x[i*8], x[i*8+1], x[i*8+2], x[i*8+3],
-                x[i*8+4], x[i*8+5], x[i*8+6], x[i*8+7],
-                ptr[i*8], ptr[i*8+1], ptr[i*8+2], ptr[i*8+3],
-                ptr[i*8+4], ptr[i*8+5], ptr[i*8+6], ptr[i*8+7]);
+    print_buffers(x, ptr, BUF_SIZE);
 
     fputs("End!\n", stderr);
 
