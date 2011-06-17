@@ -7,8 +7,8 @@
  * (If this pans out, I'll make the end result open-source)
  */
 
+#include <inttypes.h>
 #include <stdio.h>
-#include <stdint.h>
 
 #include <xf86drm.h>
 #include <radeon_drm.h>
@@ -29,7 +29,8 @@ static void initialize_x()
 
 static void print_bo_info(struct radeon_bo *bo)
 {
-    fprintf(stderr, "  mapped to %p\n  flags: %x\n  handle: %x\n  size: %x\n",
+    fprintf(stderr, "  mapped to %p\n  flags: %" PRIx32
+            "\n  handle: %" PRIx32 "\n  size: %" PRIx32 "\n",
             bo->ptr, bo->flags, bo->handle, bo->size);
 }
 
@@ -72,7 +73,8 @@ int main(int argc, char **argv)
 
     if(!drmCommandWriteRead(drm_fd, DRM_RADEON_GEM_INFO, &meminfo, sizeof(meminfo)))
         fprintf(stderr,
-                "GART size: %8lx\nVRAM size: %8lx\n VRAM vis: %8lx\n",
+                "GART size: %8" PRIx64 "\nVRAM size: %8" PRIx64
+                "\n VRAM vis: %8" PRIx64 "\n",
                 meminfo.gart_size, meminfo.vram_size, meminfo.vram_visible);
     else
         fputs("Ioctl DRM_RADEON_GEM_INFO failed\n", stderr);
