@@ -8,13 +8,20 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 
 #include <xf86drm.h>
+#include <radeon_drm.h>
+#include <radeon_bo.h>
+#include <radeon_bo_gem.h>
 
 int main(int argc, char **argv)
 {
     int drm_fd = -1, rval = 0;
     drmSetVersion sv;
+    struct radeon_bo_manager *bufmgr = NULL;
+    struct radeon_bo *bo = NULL;
+    struct drm_radeon_gem_info meminfo;
 
     fputs("Hello world!\n", stderr);
 
@@ -24,6 +31,8 @@ int main(int argc, char **argv)
       rval = 1;
       goto cleanup;
     }
+
+    fprintf(stderr, "Got fd %d\n", drm_fd);
 
     /*
      * Using the same parameters as in radeondemo
@@ -40,11 +49,43 @@ int main(int argc, char **argv)
       goto cleanup;
     }
 
-    fprintf(stderr, "Got fd %d\n", drm_fd);
+    if(!drmCommandWriteRead(drm_fd, DRM_RADEON_GEM_INFO, &meminfo, sizeof(meminfo)))
+        fprintf(stderr,
+                "GART size: %8lx\nVRAM size: %8lx\n VRAM vis: %8lx\n",
+                meminfo.gart_size, meminfo.vram_size, meminfo.vram_visible);
+    else
+        fputs("Ioctl DRM_RADEON_GEM_INFO failed\n", stderr);
+
+    /* Going to assume proper kernel support is there from here on... */
+
+    if((bufmgr = radeon_bo_manager_gem_ctor(drm_fd)) == NULL) {
+      fputs("Could not initialize a buffer object manager\n", stderr);
+      rval = 1;
+      goto cleanup;
+    }
+
+    /* Make buffer object */
+    if((bo = radeon_bo_open(bufmgr, /* buffer manager */
+                            0,      /* handle (0 for new) */
+                            256,    /* size (in bytes) */
+                            4096,   /* alignment (in bytes) */
+                            RADEON_GEM_DOMAIN_VRAM, /* memory domain */
+                            0))     /* flags */
+       == NULL) {
+        fputs("Could not create the desired buffer object\n", stderr);
+        rval = 1;
+        goto cleanup;
+    }
 
     fputs("End!\n", stderr);
 
 cleanup:
+
+    if(bo != NULL)
+        bo = radeon_bo_unref(bo);
+
+    if(bufmgr != NULL)
+        radeon_bo_manager_gem_dtor(bufmgr);
 
     if(drm_fd >= 0)
         drmClose(drm_fd);
