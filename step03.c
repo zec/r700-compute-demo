@@ -17,6 +17,8 @@
 
 #define BUF_SIZE 256
 
+#define HLINE(s) "---------------- " s " ----------------\n"
+
 static unsigned char x[BUF_SIZE];
 
 static void initialize_x()
@@ -56,8 +58,8 @@ int main(int argc, char **argv)
     int drm_fd = -1, rval = 0;
     drmSetVersion sv;
     struct radeon_bo_manager *bufmgr = NULL;
-    int bo_mapped = 0;
-    struct radeon_bo *bo = NULL;
+    int bo_mapped = 0, bo2_mapped = 0;
+    struct radeon_bo *bo = NULL, *bo2 = NULL;
     struct drm_radeon_gem_info meminfo;
     size_t i;
     unsigned char *ptr = NULL;
@@ -105,12 +107,12 @@ int main(int argc, char **argv)
     }
 
     /* Make buffer object */
-    if((bo = radeon_bo_open(bufmgr, /* buffer manager */
-                            0,      /* handle (0 for new) */
-                            256,    /* size (in bytes) */
-                            4096,   /* alignment (in bytes) */
+    if((bo = radeon_bo_open(bufmgr,   /* buffer manager */
+                            0,        /* handle (0 for new) */
+                            BUF_SIZE, /* size (in bytes) */
+                            4096,     /* alignment (in bytes) */
                             RADEON_GEM_DOMAIN_VRAM, /* memory domain */
-                            0))     /* flags */
+                            0))       /* flags */
        == NULL) {
         fputs("Could not create the desired buffer object\n", stderr);
         rval = 1;
@@ -152,7 +154,31 @@ int main(int argc, char **argv)
         ptr = bo->ptr;
     }
 
+    fputs(HLINE("BUFFER 1"), stderr);
     print_buffers(x, ptr, BUF_SIZE);
+
+    radeon_bo_unmap(bo);
+    bo_mapped = 0;
+
+    if((bo2 = radeon_bo_open(bufmgr, 0, BUF_SIZE, 4096, RADEON_GEM_DOMAIN_VRAM, 0))
+       == NULL) {
+        fputs("Could not create a second buffer object\n", stderr);
+        rval = 1;
+        goto cleanup;
+    }
+
+    if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
+        fputs("Could not map second buffer object into main memory\n", stderr);
+        rval = 1;
+        goto cleanup;
+    } else {
+        bo2_mapped = 1;
+        fputs("Buffer object 2 mapped\n", stderr);
+        print_bo_info(bo2);
+    }
+
+    fputs(HLINE("BUFFER 2"), stderr);
+    print_buffers(x, (unsigned char *) bo2->ptr, BUF_SIZE);
 
     fputs("End!\n", stderr);
 
@@ -163,6 +189,12 @@ cleanup:
 
     if(bo != NULL)
         bo = radeon_bo_unref(bo);
+
+    if(bo2_mapped)
+        radeon_bo_unmap(bo2);
+
+    if(bo2 != NULL)
+        bo2 = radeon_bo_unref(bo2);
 
     if(bufmgr != NULL)
         radeon_bo_manager_gem_dtor(bufmgr);
