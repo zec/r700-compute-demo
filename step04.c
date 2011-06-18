@@ -179,11 +179,14 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-    if((cs = radeon_cs_create(cmdmgr, 100)) == NULL) {
+    if((cs = radeon_cs_create(cmdmgr, 1024)) == NULL) {
         fputs("Could not create a command stream\n", stderr);
         rval = 1;
         goto cleanup;
     }
+
+    radeon_cs_set_limit(cs, RADEON_GEM_DOMAIN_VRAM, meminfo.vram_visible);
+    radeon_cs_set_limit(cs, RADEON_GEM_DOMAIN_GTT, meminfo.gart_size);
 
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
