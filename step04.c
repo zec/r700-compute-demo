@@ -211,7 +211,7 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-    if((cs = radeon_cs_create(cmdmgr, 1024)) == NULL) {
+    if((cs = radeon_cs_create(cmdmgr, 1024)) == NULL) { /* 1024 dword size */
         fputs("Could not create a command stream\n", stderr);
         rval = 1;
         goto cleanup;
