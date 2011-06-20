@@ -10,6 +10,8 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include <sys/ioctl.h>
+
 #include <xf86drm.h>
 #include <radeon_drm.h>
 #include <radeon_bo.h>
@@ -94,6 +96,14 @@ int main(int argc, char **argv)
         rval = 1;
         goto cleanup;
     }
+
+#if 0
+    if(ioctl(drm_fd, DRM_IOCTL_SET_MASTER, 0) < 0) {
+        perror("Failed to gain master status");
+        rval = 1;
+        goto cleanup;
+    }
+#endif
 
     if(!drmCommandWriteRead(drm_fd, DRM_RADEON_GEM_INFO, &meminfo, sizeof(meminfo)))
         fprintf(stderr,
