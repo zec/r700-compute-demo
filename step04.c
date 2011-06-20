@@ -61,12 +61,13 @@ int main(int argc, char **argv)
     drmSetVersion sv;
     struct radeon_bo_manager *bufmgr = NULL;
     int bo_mapped = 0, bo2_mapped = 0;
-    struct radeon_bo *bo = NULL, *bo2 = NULL;
+    struct radeon_bo *bo = NULL, *bo2 = NULL, *shader = NULL;
     struct drm_radeon_gem_info meminfo;
     size_t i;
     unsigned char *ptr = NULL;
     struct radeon_cs_manager *cmdmgr = NULL;
     struct radeon_cs *cs = NULL;
+    uint32_t *sptr = NULL;
 
     fputs("Hello world!\n", stderr);
 
@@ -173,6 +174,27 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
+    if((shader = radeon_bo_open(bufmgr, 0, 4096, 4096, RADEON_GEM_DOMAIN_VRAM, 0)) == NULL) {
+        fputs("Could not create shader\'s buffer object\n", stderr);
+        rval = 1;
+        goto cleanup;
+    }
+
+    if((radeon_bo_map(shader, 1) != 0) || (shader->ptr == NULL)) {
+        fputs("Could not map shader\'s buffer object\n", stderr);
+        rval = 1;
+        goto cleanup;
+    } else {
+        fputs("Shader buffer object mapped\n", stderr);
+        print_bo_info(shader);
+        sptr = shader->ptr;
+    }
+
+    /* Shader program */
+    *sptr++ = 0x00000000;
+
+    radeon_bo_unmap(shader);
+
     if((cmdmgr = radeon_cs_manager_gem_ctor(drm_fd)) == NULL) {
         fputs("Could not create a command stream manager\n", stderr);
         rval = 1;
@@ -207,6 +229,9 @@ cleanup:
 
     if(cs != NULL)
         radeon_cs_destroy(cs);
+
+    if(shader != NULL)
+        shader = radeon_bo_unref(shader);
 
     if(bo_mapped)
         radeon_bo_unmap(bo);
