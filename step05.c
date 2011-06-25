@@ -116,6 +116,8 @@ static inline void check_and_begin(struct radeon_cs *cs, size_t num_dw,
     radeon_cs_begin(cs, num_dw, file, func, line);
 }
 
+#define END(cs) radeon_cs_end((cs), __FILE__, __func__, __LINE__)
+
 /* Convenience abbreviation */
 #define rad_cwd radeon_cs_write_dword
 
@@ -171,18 +173,20 @@ do { \
     PACK3((cs), (op), 2); \
     rad_cwd((cs), to_cmd_idx((reg))); \
     rad_cwd((cs), (val)); \
-while(0)
+    END((cs)); \
+} while(0)
 
 /* A convenience wrapper for setting multiple registers with constant values */
 #define MULTI_REG(cs, op, reg, ...) \
 do { \
     static const uint32_t reg_vals[] = {__VA_ARGS__}; \
     size_t k = 0; \
-    PACK3((cs), (op), (sizeof(reg_vals) / sizeof(uint32_t)) + 1); \
-    rad_cwd((cs), to_cmd_idx((reg)); \
+    PACK3( (cs), (op), (sizeof(reg_vals) / sizeof(uint32_t)) + 1 ); \
+    rad_cwd( (cs), to_cmd_idx((reg)) ); \
     while(k < sizeof(reg_vals) / sizeof(uint32_t)) \
         rad_cwd((cs), reg_vals[k++]); \
-while(0)
+    END((cs)); \
+} while(0)
 
 int main(int argc, char **argv)
 {
@@ -353,6 +357,7 @@ int main(int argc, char **argv)
     PACK3(cs, IT_CONTEXT_CONTROL, 2);
     rad_cwd(cs, 0x80000000);
     rad_cwd(cs, 0x80000000);
+    END(cs);
 
     /* Set SX_MISC */
     REG_PACK3(cs, IT_SET_CONTEXT_REG, SX_MISC, 0);
