@@ -57,6 +57,23 @@ static void print_buffers(const unsigned char *orig,
 #undef B
 }
 
+static void flush_indirect(struct radeon_cs *cs)
+{
+    radeon_cs_emit(cs);
+    radeon_cs_erase(cs);
+}
+
+/* Command-stream size check */
+static inline void check_and_begin(struct radeon_cs *cs, size_t num_dw,
+                                   const char *file, const char *func, int line)
+{
+    if(cs->cdw + num_dw > cs->ndw)
+        flush_indirect(cs);
+
+    radeon_cs_begin(cs, num_dw, file, func, line);
+}
+#define CHECK(cs, ndw) do { check_and_begin((cs), (ndw), __FILE__, __func__, __LINE__); } while(0)
+
 int main(int argc, char **argv)
 {
     int drm_fd = -1, rval = 0;
@@ -211,7 +228,7 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-    if((cs = radeon_cs_create(cmdmgr, 1024)) == NULL) { /* 1024 dword size */
+    if((cs = radeon_cs_create(cmdmgr, 16384)) == NULL) { /* 16384 dword command-stream buffer */
         fputs("Could not create a command stream\n", stderr);
         rval = 1;
         goto cleanup;
@@ -219,6 +236,8 @@ int main(int argc, char **argv)
 
     radeon_cs_set_limit(cs, RADEON_GEM_DOMAIN_VRAM, meminfo.vram_visible);
     radeon_cs_set_limit(cs, RADEON_GEM_DOMAIN_GTT, meminfo.gart_size);
+
+    radeon_cs_space_set_flush(cs, (void (*)(void *)) flush_indirect, cs);
 
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
