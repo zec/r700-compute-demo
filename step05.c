@@ -19,6 +19,8 @@
 #include <radeon_cs.h>
 #include <radeon_cs_gem.h>
 
+#include "r600_reg.h"
+
 #define BUF_SIZE 256
 
 #define HLINE(s) "---------------- " s " ----------------\n"

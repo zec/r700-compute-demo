@@ -12,3 +12,5 @@ $(PROGS): %: %.c
 
 clean:
 	rm -f $(PROGS)
+
+step05: r600_reg.h r600_reg_auto_r6xx.h r600_reg_r6xx.h r600_reg_r7xx.h
