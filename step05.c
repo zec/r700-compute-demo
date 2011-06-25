@@ -371,6 +371,16 @@ int main(int argc, char **argv)
 
     /* Set depth-buffer registers */
     REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_DEPTH_CONTROL, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_SHADER_CONTROL, 0);
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, DB_RENDER_CONTROL,
+              STENCIL_COMPRESS_DISABLE_bit | DEPTH_COMPRESS_DISABLE_bit, /* TODO: look into COLOR_DISABLE_bit (may be R800-specific) */
+              0); /* DB_RENDER_OVERRIDE */
+    /* TODO: look into DEPTH_VIEW */
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_PRELOAD_CONTROL, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_SRESULTS_COMPARE_STATE1, 0);
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, DB_STENCIL_CLEAR, 0,
+              0 /* DB_DEPTH_CLEAR */);
+    /* TODO: look into DB_ALPHA_TO_MASK */
 
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
