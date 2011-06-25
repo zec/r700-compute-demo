@@ -377,10 +377,63 @@ int main(int argc, char **argv)
               0); /* DB_RENDER_OVERRIDE */
     REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_DEPTH_VIEW, 0);
     REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_PRELOAD_CONTROL, 0);
-    REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_SRESULTS_COMPARE_STATE1, 0);
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, DB_SRESULTS_COMPARE_STATE0, 0,
+              0); /* DB_SRESULTS_COMPARE_STATE1 */
     MULTI_REG(cs, IT_SET_CONTEXT_REG, DB_STENCIL_CLEAR, 0,
               0 /* DB_DEPTH_CLEAR */);
     REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_ALPHA_TO_MASK, 0);
+
+    /* Shader control */
+    REG_PACK3(cs, IT_SET_CONFIG_REG, R7xx_SQ_DYN_GPR_CNTL_PS_FLUSH_REQ, 0);
+    MULTI_REG(cs, IT_SET_CONFIG_REG, SQ_CONFIG,
+              VC_ENABLE_bit | /* SQ_CONFIG */
+              EXPORT_SRC_C_bit |
+              ALU_INST_PREFER_VECTOR_bit |
+              (sq_ps_prio << PS_PRIO_shift) |
+              (sq_vs_prio << VS_PRIO_shift) |
+              (sq_gs_prio << GS_PRIO_shift) |
+              (sq_es_prio << ES_PRIO_shift),
+              (sq_num_ps_gprs << NUM_PS_GPRS_shift) | /* SQ_GPR_RESOURCE_MGMT_1 */
+              (sq_num_vs_gprs << NUM_VS_GPRS_shift) |
+              (sq_num_temp_gprs << NUM_CLAUSE_TEMP_GPRS_shift),
+              (sq_num_gs_gprs << NUM_GS_GPRS_shift) | /* SQ_GPR_RESOURCE_MGMT_2 */
+              (sq_num_es_gprs << NUM_ES_GPRS_shift),
+              (sq_num_ps_threads << NUM_PS_THREADS_shift) | /* SQ_THREAD_RESOURCE_MGMT */
+              (sq_num_vs_threads << NUM_VS_THREADS_shift) |
+              (sq_num_gs_threads << NUM_GS_THREADS_shift) |
+              (sq_num_es_threads << NUM_ES_THREADS_shift),
+              (sq_num_ps_stack_entries << NUM_PS_STACK_ENTRIES_shift) | /* SQ_STACK_RESOURCE_MGMT_1 */
+              (sq_num_vs_stack_entries << NUM_VS_STACK_ENTRIES_shift),
+              (sq_num_gs_stack_entries << NUM_GS_STACK_ENTRIES_shift) | /* SQ_STACK_RESOURCE_MGMT_2 */
+              (sq_num_es_stack_entries << NUM_ES_STACK_ENTRIES_shift));
+
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, SQ_ESGS_RING_ITEMSIZE,
+              0, /* SQ_ESGS_RING_ITEMSIZE */
+              0, /* SQ_GSVS_RING_ITEMSIZE */
+              0, /* SQ_ESTMP_RING_ITEMSIZE */
+              0, /* SQ_GSTMP_RING_ITEMSIZE */
+              0, /* SQ_VSTMP_RING_ITEMSIZE */
+              0, /* SQ_PSTMP_RING_ITEMSIZE */
+              0, /* SQ_FBUF_RING_ITEMSIZE */
+              0, /* SQ_REDUC_RING_ITEMSIZE */
+              0); /* SQ_GS_VERT_ITEMSIZE */
+
+    MULTI_REG(cs, IT_SET_CTL_CONST, SQ_VTX_BASE_VTX_LOC,
+              0, /* SQ_VTX_BASE_VTX_LOC */
+              0); /* SQ_VTX_START_INST_LOC */
+
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, SQ_VTX_SEMANTIC_0,
+              0, 0, 0, 0, 0, 0, 0, 0, /* SQ_VTX_SEMANTIC_[0-7] */
+              0, 0, 0, 0, 0, 0, 0, 0, /* 8-15 */
+              0, 0, 0, 0, 0, 0, 0, 0, /* 16-23 */
+              0, 0, 0, 0, 0, 0, 0, 0); /* 24-31 */
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_PGM_RESOURCES_PS, 0);
+
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, CB_BLEND0_CONTROL,
+              0, 0, 0, 0, 0, 0, 0, 0); /* CB_BLEND[0-7]_CONTROL */
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_PGM_RESOURCES_FS, 0);
 
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
