@@ -23,6 +23,9 @@
 
 #define HLINE(s) "---------------- " s " ----------------\n"
 
+/* Low n bits mask */
+#define LOB(n) ((1 << (n)) - 1)
+
 static unsigned char x[BUF_SIZE];
 
 static void initialize_x()
@@ -72,7 +75,32 @@ static inline void check_and_begin(struct radeon_cs *cs, size_t num_dw,
 
     radeon_cs_begin(cs, num_dw, file, func, line);
 }
-#define CHECK(cs, ndw) do { check_and_begin((cs), (ndw), __FILE__, __func__, __LINE__); } while(0)
+
+/* Convenience abbreviation */
+#define rad_cwd radeon_cs_write_dword
+
+/* Begin a packet0 */
+static inline void begin_packet0(struct radeon_cs *cs, uint32_t base_index,
+                                 uint32_t data_count, const char *file,
+                                 const char *func, int line)
+{
+    check_and_begin(cs, data_count + 1, file, func, line);
+    rad_cwd(cs, ( ((data_count - 1) & LOB(14)) << 16 ) |
+                (base_index & LOB(16)));
+}
+#define PACK0(cs, idx, cdw) begin_packet0((cs), (idx), (cdw), __FILE__, __func__, __LINE__)
+
+/* Begin a packet3 */
+static inline void begin_packet3(struct radeon_cs *cs, uint32_t opcode,
+                                 uint32_t data_count, const char *file,
+                                 const char *func, int line)
+{
+    check_and_begin(cs, data_count + 1, file, func, line);
+    rad_cwd(cs, 0xc0000000 |
+                ( ((data_count - 1) & LOB(14)) << 16 ) |
+                ( (opcode & LOB(8)) << 8 ));
+}
+#define PACK3(cs, op, cdw) begin_packet3((cs), (op), (cdw), __FILE__, __func__, __LINE__)
 
 int main(int argc, char **argv)
 {
