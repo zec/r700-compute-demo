@@ -44,6 +44,28 @@
 /* Low n bits mask */
 #define LOB(n) ((1 << (n)) - 1)
 
+/*
+ * Information about the card I'm targeting (RV730 series),
+ * from src/r6xx_accel.c in xf86-video-ati
+ */
+#define sq_ps_prio 0
+#define sq_vs_prio 1
+#define sq_gs_prio 2
+#define sq_es_prio 3
+#define sq_num_ps_gprs 84
+#define sq_num_vs_gprs 36
+#define sq_num_temp_gprs 4
+#define sq_num_gs_gprs 0
+#define sq_num_es_gprs 0
+#define sq_num_ps_threads 188
+#define sq_num_vs_threads 60
+#define sq_num_gs_threads 0
+#define sq_num_es_threads 0
+#define sq_num_ps_stack_entries 128
+#define sq_num_vs_stack_entries 128
+#define sq_num_gs_stack_entries 0
+#define sq_num_es_stack_entries 0
+
 static unsigned char x[BUF_SIZE];
 
 static void initialize_x()
@@ -97,7 +119,7 @@ static inline void check_and_begin(struct radeon_cs *cs, size_t num_dw,
 /* Convenience abbreviation */
 #define rad_cwd radeon_cs_write_dword
 
-/* Begin a packet0 */
+/* Begin a type-0 packet */
 static inline void begin_packet0(struct radeon_cs *cs, uint32_t base_index,
                                  uint32_t data_count, const char *file,
                                  const char *func, int line)
@@ -108,7 +130,7 @@ static inline void begin_packet0(struct radeon_cs *cs, uint32_t base_index,
 }
 #define PACK0(cs, idx, cdw) begin_packet0((cs), (idx), (cdw), __FILE__, __func__, __LINE__)
 
-/* Begin a packet3 */
+/* Begin a type-3 packet */
 static inline void begin_packet3(struct radeon_cs *cs, uint32_t opcode,
                                  uint32_t data_count, const char *file,
                                  const char *func, int line)
@@ -119,6 +141,48 @@ static inline void begin_packet3(struct radeon_cs *cs, uint32_t opcode,
                 ( (opcode & LOB(8)) << 8 ));
 }
 #define PACK3(cs, op, cdw) begin_packet3((cs), (op), (cdw), __FILE__, __func__, __LINE__)
+
+/* Converts a register address to a type-3 packet register offset */
+static inline uint32_t to_cmd_idx(uint32_t reg)
+{
+    if(reg < SET_CONFIG_REG_end)
+        return (reg - SET_CONFIG_REG_offset) >> 2;
+    else if(reg < SET_CONTEXT_REG_end)
+        return (reg - SET_CONTEXT_REG_offset) >> 2;
+    else if(reg < SET_ALU_CONST_end)
+        return (reg - SET_ALU_CONST_offset) >> 2;
+    else if(reg < SET_RESOURCE_end)
+        return (reg - SET_RESOURCE_offset) >> 2;
+    else if(reg < SET_SAMPLER_end)
+        return (reg - SET_SAMPLER_offset) >> 2;
+    else if(reg < SET_CTL_CONST_end)
+        return (reg - SET_CTL_CONST_offset) >> 2;
+    else if(reg < SET_LOOP_CONST_end)
+        return (reg - SET_LOOP_CONST_offset) >> 2;
+    else if(reg < SET_BOOL_CONST_end)
+        return (reg - SET_BOOL_CONST_offset) >> 2;
+    else
+        return 0;
+}
+
+/* A convenience wrapper for a common operation: setting a single register */
+#define REG_PACK3(cs, op, reg, val) \
+do { \
+    PACK3((cs), (op), 2); \
+    rad_cwd((cs), to_cmd_idx((reg))); \
+    rad_cwd((cs), (val)); \
+while(0)
+
+/* A convenience wrapper for setting multiple registers with constant values */
+#define MULTI_REG(cs, op, reg, ...) \
+do { \
+    static const uint32_t reg_vals[] = {__VA_ARGS__}; \
+    size_t k = 0; \
+    PACK3((cs), (op), (sizeof(reg_vals) / sizeof(uint32_t)) + 1); \
+    rad_cwd((cs), to_cmd_idx((reg)); \
+    while(k < sizeof(reg_vals) / sizeof(uint32_t)) \
+        rad_cwd((cs), reg_vals[k++]); \
+while(0)
 
 int main(int argc, char **argv)
 {
@@ -284,6 +348,24 @@ int main(int argc, char **argv)
     radeon_cs_set_limit(cs, RADEON_GEM_DOMAIN_GTT, meminfo.gart_size);
 
     radeon_cs_space_set_flush(cs, (void (*)(void *)) flush_indirect, cs);
+
+    /* Start 3D engine */
+    PACK3(cs, IT_CONTEXT_CONTROL, 2);
+    rad_cwd(cs, 0x80000000);
+    rad_cwd(cs, 0x80000000);
+
+    /* Set SX_MISC */
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SX_MISC, 0);
+
+    /* Set SX_ALPHA_TEST_CONTROL and CB_BLEND_{RED,GREEN,BLUE,ALPHA} */
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, SX_ALPHA_TEST_CONTROL,
+              0, 0, 0, 0, 0);
+
+    /* Set SX_MEMORY_EXPORT_SIZE */
+    REG_PACK3(cs, IT_SET_CONFIG_REG, SX_MEMORY_EXPORT_SIZE, 0);
+
+    /* Set depth-buffer registers */
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, DB_DEPTH_CONTROL, 0);
 
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
