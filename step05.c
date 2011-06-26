@@ -435,6 +435,137 @@ int main(int argc, char **argv)
 
     REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_PGM_RESOURCES_FS, 0);
 
+    /* VGT registers */
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, VGT_OUTPUT_PATH_CNTL,
+              0, /* VGT_OUTPUT_PATH_CNTL */
+              0, /* VGT_HOS_CNTL */
+              0, /* VGT_HOS_MAX_TESS_LEVEL */
+              0, /* VGT_HOS_MIN_TESS_LEVEL */
+              0, /* VGT_HOS_REUSE_DEPTH */
+              0, /* VGT_GROUP_PRIM_TYPE */
+              0, /* VGT_GROUP_FIRST_DECR */
+              0, /* VGT_GROUP_DECR */
+              0, /* VGT_GROUP_VECT_0_CNTL */
+              0, /* VGT_GROUP_VECT_1_CNTL */
+              0, /* VGT_GROUP_VECT_0_FMT_CNTL */
+              0, /* VGT_GROUP_VECT_1_FMT_CNTL */
+              0); /* VGT_GS_MODE */
+
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, VGT_STRMOUT_EN,
+              0, /* VGT_STRMOUT_EN */
+              0, /* VGT_REUSE_OFF */
+              0); /* VGT_VTX_CNT_EN */
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, VGT_STRMOUT_BUFFER_EN, 0);
+
+    /* primitive assembly registers */
+    REG_PACK3(cs, IT_SET_CONFIG_REG, PA_CL_ENHANCE,
+              CLIP_VTX_REORDER_ENA_bit | (3 << NUM_CLIP_SEQ_shift));
+    REG_PACK3(cs, IT_SET_CONFIG_REG, PA_CL_CLIP_CNTL, 0);
+
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, PA_SC_VPORT_ZMIN_0,
+              0, /* PA_SC_VPORT_ZMIN_0 = 0.0f */
+              0x3f800000); /* PA_SC_VPORT_ZMAX_0 = 1.0f */
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, PA_SC_WINDOW_OFFSET, 0);
+
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, PA_SC_CLIPRECT_RULE,
+              CLIP_RULE_mask, /* PA_SC_CLIPRECT_RULE */
+              (0 << PA_SC_CLIPRECT_0_TL__TL_X_shift) | /* PA_SC_CLIPRULE_0_TL */
+              (0 << PA_SC_CLIPRECT_0_TL__TL_Y_shift),
+              (8192 << PA_SC_CLIPRECT_0_BR__BR_X_shift) | /* PA_SC_CLIPRULE_0_BR */
+              (8192 << PA_SC_CLIPRECT_0_BR__BR_Y_shift),
+              (0 << PA_SC_CLIPRECT_0_TL__TL_X_shift) | /* PA_SC_CLIPRULE_1_TL */
+              (0 << PA_SC_CLIPRECT_0_TL__TL_Y_shift),
+              (8192 << PA_SC_CLIPRECT_0_BR__BR_X_shift) | /* PA_SC_CLIPRULE_1_BR */
+              (8192 << PA_SC_CLIPRECT_0_BR__BR_Y_shift),
+              (0 << PA_SC_CLIPRECT_0_TL__TL_X_shift) | /* PA_SC_CLIPRULE_2_TL */
+              (0 << PA_SC_CLIPRECT_0_TL__TL_Y_shift),
+              (8192 << PA_SC_CLIPRECT_0_BR__BR_X_shift) | /* PA_SC_CLIPRULE_2_BR */
+              (8192 << PA_SC_CLIPRECT_0_BR__BR_Y_shift),
+              (0 << PA_SC_CLIPRECT_0_TL__TL_X_shift) | /* PA_SC_CLIPRULE_3_TL */
+              (0 << PA_SC_CLIPRECT_0_TL__TL_Y_shift),
+              (8192 << PA_SC_CLIPRECT_0_BR__BR_X_shift) | /* PA_SC_CLIPRULE_3_BR */
+              (8192 << PA_SC_CLIPRECT_0_BR__BR_Y_shift));
+
+    for(i = 0; i < PA_SC_VPORT_SCISSOR_0_TL_num; i++)
+      MULTI_REG(cs, IT_SET_CONTEXT_REG,
+                PA_SC_VPORT_SCISSOR_0_TL + i * PA_SC_VPORT_SCISSOR_0_TL_offset,
+                (0 << PA_SC_VPORT_SCISSOR_0_TL__TL_X_shift) | /* PA_SC_VPORT_SCISSOR_[i]_TL */
+                (0 << PA_SC_VPORT_SCISSOR_0_TL__TL_Y_shift),
+                (8192 << PA_SC_VPORT_SCISSOR_0_BR__BR_X_shift) | /* PA_SC_VPORT_SCISSOR_[i]_BR */
+                (8192 << PA_SC_VPORT_SCISSOR_0_BR__BR_Y_shift));
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, PA_SC_MODE_CNTL, 0);
+
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, PA_SC_LINE_CNTL,
+              0, /* PA_SC_LINE_CNTL */
+              0, /* PA_SC_AA_CONFIG */
+              (X_ROUND_TO_EVEN << PA_SU_VTX_CNTL__ROUND_MODE_shift) | /* PA_SU_VTX_CNTL */
+              PIX_CENTER_bit,
+              0x3f800000, /* PA_CL_GB_VERT_CLIP_ADJ = 1.0f */
+              0x3f800000, /* PA_CL_GB_VERT_DISC_ADJ = 1.0f */
+              0x3f800000, /* PA_CL_GB_HORZ_CLIP_ADJ = 1.0f */
+              0x3f800000, /* PA_CL_GB_HORZ_DISC_ADJ = 1.0f */
+              0, /* PA_SC_AA_SAMPLE_LOCS_MCTX */
+              0); /* PA_SC_AA_SAMPLE_LOCS_8S_WD1_MCTX */
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, PA_SC_AA_MASK, 0xFFFFFFFF);
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, PA_CL_CLIP_CNTL, CLIP_DISABLE_bit);
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, PA_CL_VTE_CNTL,
+              VTX_XY_FMT_bit, /* PA_CL_VTE_CNTL */
+              0, /* PA_CL_VS_OUT_CNTL */
+              0); /* PA_CL_NANINF_CNTL */
+
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, PA_SU_POLY_OFFSET_DB_FMT_CNTL,
+              0, /* PA_SU_POLY_OFFSET_DB_FMT_CNTL */
+              0, /* PA_SU_POLY_OFFSET_CLAMP */
+              0, /* PA_SU_POLY_OFFSET_FRONT_SCALE */
+              0, /* PA_SU_POLY_OFFSET_FRONT_OFFSET */
+              0, /* PA_SU_POLY_OFFSET_BACK_SCALE */
+              0); /* PA_SU_POLY_OFFSET_BACK_OFFSET */
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, PA_SC_LINE_STIPPLE, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, PA_SC_MODE_CNTL, 0);
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, PA_SU_LINE_CNTL, 0);
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, PA_SU_SC_MODE_CNTL,
+              CULL_FRONT_bit | /* PA_SU_SC_MODE_CNTL */
+              CULL_BACK_bit |
+              FACE_bit |
+              (2 << POLYMODE_FRONT_PTYPE_shift) |
+              (2 << POLYMODE_BACK_PTYPE_shift));
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, PA_SU_POINT_SIZE,
+              0, /* PA_SU_POINT_SIZE */
+              0); /* PA_SU_POINT_MINMAX */
+
+    /* SPI registers */
+    REG_PACK3(cs, IT_SET_CONFIG_REG, SPI_CONFIG_CNTL, 0);
+    REG_PACK3(cs, IT_SET_CONFIG_REG, SPI_CONFIG_CNTL_1, X_DELAY_17_CLKS << VTX_DONE_DELAY_shift);
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SPI_PS_INPUT_CNTL_0, 0);
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, SPI_INPUT_Z,
+              0, /* SPI_INPUT_Z */
+              0); /* SPI_FOG_CNTL */
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SPI_VS_OUT_CONFIG, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SPI_VS_OUT_ID_0, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SPI_INTERP_CONTROL_0, 0);
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, SPI_PS_IN_CONTROL_0,
+              LINEAR_GRADIENT_ENA_bit, /* SPI_PS_IN_CONTROL_0 */
+              0); /* SPI_PS_IN_CONTROL_1 */
+
+    /* color buffer registers */
+    MULTI_REG(cs, IT_SET_CONTEXT_REG, CB_COLOR0_BASE,
+              0, 0, 0, 0, 0, 0, 0, 0, /* CB_COLOR[0-7]_BASE */
+              0, 0, 0, 0, 0, 0, 0, 0, /* CB_COLOR[0-7]_SIZE */
+              0, 0, 0, 0, 0, 0, 0, 0, /* CB_COLOR[0-7]_VIEW */
+              0, 0, 0, 0, 0, 0, 0, 0, /* CB_COLOR[0-7]_INFO */
+              0, 0, 0, 0, 0, 0, 0, 0, /* CB_COLOR[0-7]_TILE */
+              0, 0, 0, 0, 0, 0, 0, 0, /* CB_COLOR[0-7]_FRAG */
+              0, 0, 0, 0, 0, 0, 0, 0); /* CB_COLOR[0-7]_MASK */
+
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
         rval = 1;
