@@ -367,8 +367,82 @@ int main(int argc, char **argv)
         sptr = shader->ptr;
     }
 
-    /* Shader program */
-    *sptr++ = 0x00000000;
+    /* Shader program; copy (1.0f, -1, 0.5f, 0) to destination */
+    /* ALU */
+    sptr[0] = CF_ALU_DWORD0(ADDR(2), KCACHE_BANK0(0),
+                            KCACHE_BANK1(0), KCACHE_MODE0(SQ_CF_KCACHE_NOP));
+    sptr[1] = CF_ALU_DWORD1(KCACHE_MODE1(SQ_CF_KCACHE_NOP), KCACHE_ADDR0(0),
+                            KCACHE_ADDR1(0), I_COUNT(4), USES_WATERFALL(0),
+                            CF_INST(SQ_CF_INST_ALU), WHOLE_QUAD_MODE(1),
+                            BARRIER(1));
+    /* EXPORT_DONE */
+    sptr[2] = CF_ALLOC_IMP_EXP_DWORD0(ARRAY_BASE(CF_PIXEL_MRT0),
+                                      TYPE(SQ_EXPORT_PIXEL), RW_GPR(0),
+                                      RW_REL(ABSOLUTE), INDEX_GPR(0),
+                                      ELEM_SIZE(1));
+    sptr[3] = CF_ALLOC_IMP_EXP_DWORD1_SWIZ(SRC_SEL_X(SQ_SEL_X),
+                                           SRC_SEL_Y(SQ_SEL_Y),
+                                           SRC_SEL_Z(SQ_SEL_Z),
+                                           SRC_SEL_W(SQ_SEL_W),
+                                           R6xx_ELEM_LOOP(0),
+                                           BURST_COUNT(1),
+                                           END_OF_PROGRAM(1),
+                                           VALID_PIXEL_MODE(0),
+                                           CF_INST(SQ_CF_INST_EXPORT_DONE),
+                                           WHOLE_QUAD_MODE(1),
+                                           BARRIER(1));
+    /* MOV GPR0.X, 1.0f */
+    sptr[4] = ALU_DWORD0(SRC0_SEL(249), SRC0_REL(ABSOLUTE), SRC0_ELEM(ELEM_X),
+                         SRC0_NEG(0),
+                         SRC1_SEL(ALU_SRC_GPR_BASE + 0), SRC1_REL(ABSOLUTE),
+                         SRC1_ELEM(ELEM_X), SRC1_NEG(0),
+                         INDEX_MODE(0), PRED_SEL(0), LAST(0));
+    sptr[5] = R7xx_ALU_DWORD1_OP2(SRC0_ABS(0), SRC1_ABS(0),
+                                  UPDATE_EXECUTE_MASK(0), UPDATE_PRED(0),
+                                  WRITE_MASK(1), OMOD(SQ_ALU_OMOD_OFF),
+                                  ALU_INST(SQ_OP2_INST_MOV),
+                                  BANK_SWIZZLE(SQ_ALU_VEC_012),
+                                  DST_GPR(0), DST_REL(ABSOLUTE),
+                                  DST_ELEM(ELEM_X), CLAMP(0));
+    /* MOV GPR0.Y, -1 */
+    sptr[6] = ALU_DWORD0(SRC0_SEL(251), SRC0_REL(ABSOLUTE), SRC0_ELEM(ELEM_Y),
+                         SRC0_NEG(0),
+                         SRC1_SEL(ALU_SRC_GPR_BASE + 0), SRC1_REL(ABSOLUTE),
+                         SRC1_ELEM(ELEM_Y), SRC1_NEG(0),
+                         INDEX_MODE(0), PRED_SEL(0), LAST(0));
+    sptr[7] = R7xx_ALU_DWORD1_OP2(SRC0_ABS(0), SRC1_ABS(0),
+                                  UPDATE_EXECUTE_MASK(0), UPDATE_PRED(0),
+                                  WRITE_MASK(1), OMOD(SQ_ALU_OMOD_OFF),
+                                  ALU_INST(SQ_OP2_INST_MOV),
+                                  BANK_SWIZZLE(SQ_ALU_VEC_012),
+                                  DST_GPR(0), DST_REL(ABSOLUTE),
+                                  DST_ELEM(ELEM_Y), CLAMP(0));
+    /* MOV GPR0.Z, 0.5f */
+    sptr[8] = ALU_DWORD0(SRC0_SEL(252), SRC0_REL(ABSOLUTE), SRC0_ELEM(ELEM_Z),
+                         SRC0_NEG(0),
+                         SRC1_SEL(ALU_SRC_GPR_BASE + 0), SRC1_REL(ABSOLUTE),
+                         SRC1_ELEM(ELEM_Z), SRC1_NEG(0),
+                         INDEX_MODE(0), PRED_SEL(0), LAST(0));
+    sptr[9] = R7xx_ALU_DWORD1_OP2(SRC0_ABS(0), SRC1_ABS(0),
+                                  UPDATE_EXECUTE_MASK(0), UPDATE_PRED(0),
+                                  WRITE_MASK(1), OMOD(SQ_ALU_OMOD_OFF),
+                                  ALU_INST(SQ_OP2_INST_MOV),
+                                  BANK_SWIZZLE(SQ_ALU_VEC_012),
+                                  DST_GPR(0), DST_REL(ABSOLUTE),
+                                  DST_ELEM(ELEM_Z), CLAMP(0));
+    /* MOV GPR0.W, 0 */
+    sptr[10] = ALU_DWORD0(SRC0_SEL(248), SRC0_REL(ABSOLUTE), SRC0_ELEM(ELEM_W),
+                          SRC0_NEG(0),
+                          SRC1_SEL(ALU_SRC_GPR_BASE + 0), SRC1_REL(ABSOLUTE),
+                          SRC1_ELEM(ELEM_W), SRC1_NEG(0),
+                          INDEX_MODE(0), PRED_SEL(0), LAST(1));
+    sptr[11] = R7xx_ALU_DWORD1_OP2(SRC0_ABS(0), SRC1_ABS(0),
+                                   UPDATE_EXECUTE_MASK(0), UPDATE_PRED(0),
+                                   WRITE_MASK(1), OMOD(SQ_ALU_OMOD_OFF),
+                                   ALU_INST(SQ_OP2_INST_MOV),
+                                   BANK_SWIZZLE(SQ_ALU_VEC_012),
+                                   DST_GPR(0), DST_REL(ABSOLUTE),
+                                   DST_ELEM(ELEM_W), CLAMP(0));
 
     radeon_bo_unmap(shader);
 
@@ -605,12 +679,12 @@ int main(int argc, char **argv)
     /* Set a render target */
     radeon_cs_space_add_persistent_bo(cs, bo2, 0, RADEON_GEM_DOMAIN_VRAM);
     if(radeon_cs_space_check(cs) != 0) {
-        fputs("Space check failed\n", stderr);
+        fputs("First space check failed\n", stderr);
         rval = 1;
         goto cleanup;
     }
 
-#define CB_SIZE 0
+#define CB_SIZE BUF_SIZE
     REG_RELOC(cs, IT_SET_CONTEXT_REG, CB_COLOR0_BASE, 0 >> 8,
               bo2, 0, RADEON_GEM_DOMAIN_VRAM);
     REG_RELOC(cs, IT_SET_CONTEXT_REG, CB_COLOR0_TILE, 0 >> 8,
