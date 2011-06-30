@@ -37,6 +37,8 @@
 
 #include "r600_reg.h"
 
+#include "r600_shader.h"
+
 #define BUF_SIZE 256
 
 #define HLINE(s) "---------------- " s " ----------------\n"
