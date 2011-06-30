@@ -600,6 +600,36 @@ int main(int argc, char **argv)
               0, 0, 0, 0, 0, 0, 0, 0, /* CB_COLOR[0-7]_FRAG */
               0, 0, 0, 0, 0, 0, 0, 0); /* CB_COLOR[0-7]_MASK */
 
+    /* Set a render target */
+    radeon_cs_space_add_persistent_bo(cs, bo2, 0, RADEON_GEM_DOMAIN_VRAM);
+    if(radeon_cs_space_check(cs) != 0) {
+        fputs("Space check failed\n", stderr);
+        rval = 1;
+        goto cleanup;
+    }
+
+#define CB_SIZE 0
+    REG_RELOC(cs, IT_SET_CONTEXT_REG, CB_COLOR0_BASE, 0 >> 8,
+              bo2, 0, RADEON_GEM_DOMAIN_VRAM);
+    REG_RELOC(cs, IT_SET_CONTEXT_REG, CB_COLOR0_TILE, 0 >> 8,
+              bo2, 0, RADEON_GEM_DOMAIN_VRAM);
+    REG_RELOC(cs, IT_SET_CONTEXT_REG, CB_COLOR0_FRAG, 0 >> 8,
+              bo2, 0, RADEON_GEM_DOMAIN_VRAM);
+    REG_RELOC(cs, IT_SET_CONTEXT_REG, CB_COLOR0_INFO, 0,
+              bo2, 0, RADEON_GEM_DOMAIN_VRAM);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, CB_COLOR0_SIZE, CB_SIZE);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, CB_COLOR0_VIEW, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, CB_COLOR0_MASK, 0);
+
+    CAB(cs, 7);
+    unchecked_packet3(cs, IT_SURFACE_SYNC, 4);
+    rad_cwd(cs, CB_ACTION_ENA_bit);
+    rad_cwd(cs, (CB_SIZE + 255) >> 8);
+    rad_cwd(cs, 0 >> 8);
+    rad_cwd(cs, 10);
+    RELOC(cs, bo2, 0, RADEON_GEM_DOMAIN_VRAM);
+    END(cs);
+
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
         rval = 1;
