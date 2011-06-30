@@ -725,18 +725,18 @@ int main(int argc, char **argv)
     RELOC(cs, shader, RADEON_GEM_DOMAIN_VRAM, 0);
     END(cs);
 
-    REG_RELOC(cs, IT_SET_CONTEXT_REG, SQ_PGM_START_VS, 0, shader, RADEON_GEM_DOMAIN_VRAM, 0);
-    REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_PGM_RESOURCES_VS,
+    REG_RELOC(cs, IT_SET_CONTEXT_REG, SQ_PGM_START_PS, 0, shader, RADEON_GEM_DOMAIN_VRAM, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_PGM_RESOURCES_PS,
               (2 << NUM_GPRS_shift) | (3 << STACK_SIZE_shift));
     REG_PACK3(cs, IT_SET_CONFIG_REG, SQ_GPR_RESOURCE_MGMT_1,
-              (2 << NUM_VS_GPRS_shift));
+              (2 << NUM_PS_GPRS_shift));
     REG_PACK3(cs, IT_SET_CONFIG_REG, SQ_STACK_RESOURCE_MGMT_1,
-              (3 << NUM_VS_STACK_ENTRIES_shift));
+              (3 << NUM_PS_STACK_ENTRIES_shift));
     REG_PACK3(cs, IT_SET_CONFIG_REG, SQ_THREAD_RESOURCE_MGMT,
-              (8 << NUM_VS_THREADS_shift));
+              (8 << NUM_PS_THREADS_shift));
 
-    REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_VSTMP_RING_SIZE, 0);
-    REG_PACK3(cs, IT_SET_LOOP_CONST, SQ_LOOP_CONST_0 + SQ_LOOP_CONST_vs*4, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_PSTMP_RING_SIZE, 0);
+    REG_PACK3(cs, IT_SET_LOOP_CONST, SQ_LOOP_CONST_0 + SQ_LOOP_CONST_ps*4, 0);
 
     /* Dispatch program */
     REG_PACK3(cs, IT_SET_CONFIG_REG, VGT_PRIMITIVE_TYPE, DI_PT_POINTLIST);
@@ -756,9 +756,6 @@ int main(int argc, char **argv)
 
     /* Flush command stream */
     flush_indirect(cs);
-
-    while(radeon_bo_is_busy(bo2, &wait_domain))
-        sleep(1);
 
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
