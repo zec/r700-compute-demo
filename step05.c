@@ -115,6 +115,7 @@ static inline void check_and_begin(struct radeon_cs *cs, size_t num_dw,
 
     radeon_cs_begin(cs, num_dw, file, func, line);
 }
+#define CAB(cs, ndw) check_and_begin((cs), (ndw), __FILE__, __func__, __LINE__)
 
 #define END(cs) radeon_cs_end((cs), __FILE__, __func__, __LINE__)
 
@@ -143,6 +144,15 @@ static inline void begin_packet3(struct radeon_cs *cs, uint32_t opcode,
                 ( (opcode & LOB(8)) << 8 ));
 }
 #define PACK3(cs, op, cdw) begin_packet3((cs), (op), (cdw), __FILE__, __func__, __LINE__)
+
+/* Begin a type-3 packet, without the check */
+static inline void unchecked_packet3(struct radeon_cs *cs, uint32_t opcode,
+                                     uint32_t data_count)
+{
+    rad_cwd(cs, 0xc0000000 |
+                ( ((data_count - 1) & LOB(14)) << 16 ) |
+                ( (opcode & LOB(8)) << 8 ));
+}
 
 /* Converts a register address to a type-3 packet register offset */
 static inline uint32_t to_cmd_idx(uint32_t reg)
@@ -185,6 +195,30 @@ do { \
     rad_cwd( (cs), to_cmd_idx((reg)) ); \
     while(k < sizeof(reg_vals) / sizeof(uint32_t)) \
         rad_cwd((cs), reg_vals[k++]); \
+    END((cs)); \
+} while(0)
+
+/* Take the value of a numeric token, and turn it into a string */
+#define ZSTR1(x) #x
+#define ZSTR(x) ZSTR1(x)
+
+#define RELOC(cs, bo, rd, wd) \
+do { \
+    if(radeon_cs_write_reloc((cs), (bo), (rd), (wd), 0) != 0) { \
+        fputs(__FILE__ ":" ZSTR(__LINE__) ": Buffer relocation failed\n", stderr); \
+        rval = 1; \
+        goto cleanup; \
+    } \
+} while(0)
+
+/* A convenience wrapper for a single-register set and a relocation */
+#define REG_RELOC(cs, op, reg, val, bo, rd, wd) \
+do { \
+    check_and_begin((cs), 5, __FILE__, __func__, __LINE__); \
+    unchecked_packet3((cs), (op), 2); \
+    rad_cwd((cs), to_cmd_idx((reg))); \
+    rad_cwd((cs), (val)); \
+    RELOC(cs, bo, rd, wd); /* writes two dwords */ \
     END((cs)); \
 } while(0)
 
