@@ -26,6 +26,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include <unistd.h>
 #include <sys/ioctl.h>
 
 #include <xf86drm.h>
@@ -69,6 +70,7 @@
 #define sq_num_es_stack_entries 0
 
 static unsigned char x[BUF_SIZE];
+static uint32_t wait_domain = RADEON_GEM_DOMAIN_VRAM;
 
 static void initialize_x()
 {
@@ -705,6 +707,58 @@ int main(int argc, char **argv)
     rad_cwd(cs, 10);
     RELOC(cs, bo2, 0, RADEON_GEM_DOMAIN_VRAM);
     END(cs);
+
+    /* Set up shader */
+    radeon_cs_space_add_persistent_bo(cs, shader, RADEON_GEM_DOMAIN_VRAM, 0);
+    if(radeon_cs_space_check(cs) != 0) {
+        fputs("Second space check failed\n", stderr);
+        rval = 1;
+        goto cleanup;
+    }
+
+    CAB(cs, 7);
+    unchecked_packet3(cs, IT_SURFACE_SYNC, 4);
+    rad_cwd(cs, SH_ACTION_ENA_bit);
+    rad_cwd(cs, ((12*4) + 255) >> 8);
+    rad_cwd(cs, 0 >> 8);
+    rad_cwd(cs, 10);
+    RELOC(cs, shader, RADEON_GEM_DOMAIN_VRAM, 0);
+    END(cs);
+
+    REG_RELOC(cs, IT_SET_CONTEXT_REG, SQ_PGM_START_VS, 0, shader, RADEON_GEM_DOMAIN_VRAM, 0);
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_PGM_RESOURCES_VS,
+              (2 << NUM_GPRS_shift) | (3 << STACK_SIZE_shift));
+    REG_PACK3(cs, IT_SET_CONFIG_REG, SQ_GPR_RESOURCE_MGMT_1,
+              (2 << NUM_VS_GPRS_shift));
+    REG_PACK3(cs, IT_SET_CONFIG_REG, SQ_STACK_RESOURCE_MGMT_1,
+              (3 << NUM_VS_STACK_ENTRIES_shift));
+    REG_PACK3(cs, IT_SET_CONFIG_REG, SQ_THREAD_RESOURCE_MGMT,
+              (8 << NUM_VS_THREADS_shift));
+
+    REG_PACK3(cs, IT_SET_CONTEXT_REG, SQ_VSTMP_RING_SIZE, 0);
+    REG_PACK3(cs, IT_SET_LOOP_CONST, SQ_LOOP_CONST_0 + SQ_LOOP_CONST_vs*4, 0);
+
+    /* Dispatch program */
+    REG_PACK3(cs, IT_SET_CONFIG_REG, VGT_PRIMITIVE_TYPE, DI_PT_POINTLIST);
+
+    PACK3(cs, IT_INDEX_TYPE, 1);
+    rad_cwd(cs, 0);
+    END(cs);
+
+    PACK3(cs, IT_NUM_INSTANCES, 1);
+    rad_cwd(cs, 128);
+    END(cs);
+
+    PACK3(cs, IT_DRAW_INDEX_AUTO, 2);
+    rad_cwd(cs, 128); /* VGT_NUM_INDICES */
+    rad_cwd(cs, (DI_SRC_SEL_AUTO_INDEX << SOURCE_SELECT_shift)); /* VGT_DRAW_INITIATOR */
+    END(cs);
+
+    /* Flush command stream */
+    flush_indirect(cs);
+
+    while(radeon_bo_is_busy(bo2, &wait_domain))
+        sleep(1);
 
     if((radeon_bo_map(bo2, 0) != 0) || (bo2->ptr == NULL)) {
         fputs("Could not map second buffer object into main memory\n", stderr);
