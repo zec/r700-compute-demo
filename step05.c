@@ -70,7 +70,6 @@
 #define sq_num_es_stack_entries 0
 
 static unsigned char x[BUF_SIZE];
-static uint32_t wait_domain = RADEON_GEM_DOMAIN_VRAM;
 
 static void initialize_x()
 {
