@@ -1,4 +1,4 @@
-PROGS = step01 step02 step03 step04 step05
+PROGS = step01 step02 step03 step04
 
 CC = gcc
 CFLAGS = `pkg-config --cflags --libs libdrm libdrm_radeon` -Wall
